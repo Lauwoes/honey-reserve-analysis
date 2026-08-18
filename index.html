@@ -54,6 +54,12 @@
     text-transform:uppercase;color:var(--muted);font-weight:400}
   td.num{font-family:"IBM Plex Mono",monospace;text-align:right}
   tr:last-child td{border-bottom:0}
+  .legend{display:flex;gap:30px;flex-wrap:wrap;margin:14px 0 30px;
+    font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.05em;
+    text-transform:uppercase;color:var(--muted)}
+  .ramp{display:block;height:8px;width:120px;margin-top:5px;
+    background:linear-gradient(90deg,var(--wax),var(--amber),var(--propolis))}
+  .hexline{stroke:var(--rule);stroke-width:1;fill:none}
   ul.caveats{max-width:66ch;padding-left:18px}
   ul.caveats li{margin-bottom:12px}
   footer{margin-top:64px;padding-top:18px;border-top:1px solid var(--rule);
@@ -107,6 +113,14 @@
     York, at a fifth of North Dakota's yield in volume terms, earns 87 per cent
     more per pound.
   </p>
+  <svg id="comb" viewBox="0 0 446 266" role="img"
+       aria-label="Honeycomb of producing states, cell fill showing share of production and colour showing price"></svg>
+  <div class="legend">
+    <div>Fill = share of US production</div>
+    <div>Colour = price received<span class="ramp"></span></div>
+    <div>$1.90 → $3.55 / lb</div>
+  </div>
+
   <svg id="scatter" viewBox="0 0 700 420" role="img"
        aria-label="Mean yield against mean price received, fifteen largest producing states"></svg>
 </section>
@@ -268,6 +282,59 @@ function concentration() {
     "text-anchor":"end", class:"lbl", fill:"var(--ink)"}, last[1] + "%"));
 }
 
+/* Wax through amber to propolis, mapped onto price received. */
+function priceColour(p) {
+  const lo = 1.90, hi = 3.55;
+  const t = Math.max(0, Math.min(1, (p - lo) / (hi - lo)));
+  const stops = [[235,217,165],[217,145,31],[107,62,17]];
+  const seg = t < 0.5 ? 0 : 1;
+  const u = t < 0.5 ? t * 2 : (t - 0.5) * 2;
+  const a = stops[seg], b = stops[seg + 1];
+  return `rgb(${a.map((c,i) => Math.round(c + (b[i]-c)*u)).join(",")})`;
+}
+
+function hexPath(cx, cy, r) {
+  const pts = [];
+  for (let i = 0; i < 6; i++) {
+    const ang = Math.PI / 180 * (60 * i - 90);
+    pts.push([(cx + r*Math.cos(ang)).toFixed(2), (cy + r*Math.sin(ang)).toFixed(2)]);
+  }
+  return "M" + pts.map(p => p.join(",")).join("L") + "Z";
+}
+
+function comb() {
+  const svg = document.getElementById("comb");
+  const defs = el("defs");
+  svg.appendChild(defs);
+
+  const perRow = 5, r = 46, w = Math.sqrt(3) * r, vstep = r * 1.5;
+  const maxShare = Math.max(...STATES.map(d => d.share));
+
+  STATES.forEach((d, i) => {
+    const row = Math.floor(i / perRow), col = i % perRow;
+    const cx = 4 + w/2 + col * w + (row % 2 ? w/2 : 0);
+    const cy = 24 + r + row * vstep;
+
+    const id = `clip-${d.s}`;
+    const clip = el("clipPath", {id});
+    clip.appendChild(el("path", {d: hexPath(cx, cy, r)}));
+    defs.appendChild(clip);
+
+    /* Square-rooted so the largest producer fills its cell and the rest stay
+       legible; raw shares run from 24% down to under 2%. */
+    const fill = Math.sqrt(d.share / maxShare);
+    svg.appendChild(el("rect", {
+      x: cx - r, y: cy + r - 2*r*fill, width: 2*r, height: 2*r*fill,
+      fill: priceColour(d.p), "clip-path": `url(#${id})`, opacity: .95
+    }));
+    svg.appendChild(el("path", {d: hexPath(cx, cy, r), class: "hexline"}));
+    svg.appendChild(el("text", {x: cx, y: cy - 1, "text-anchor": "middle",
+      class: "tick", fill: "var(--ink)"}, d.s));
+    svg.appendChild(el("text", {x: cx, y: cy + 12, "text-anchor": "middle",
+      class: "tick"}, "$" + d.p.toFixed(2)));
+  });
+}
+
 function scatter() {
   const svg = document.getElementById("scatter");
   const W = 700, H = 420, pad = {l:58,r:26,t:20,b:46};
@@ -307,6 +374,7 @@ document.getElementById("states").innerHTML = STATES.map(d =>
    <td class="num">${d.cv.toFixed(3)}</td></tr>`).join("");
 
 concentration();
+comb();
 scatter();
 </script>
 </body>
