@@ -3,7 +3,7 @@
 A supply-side test of a premium honey concept, using ten years of USDA
 production and price records.
 
-**[View the dashboard →](https://lauwoes.github.io/honey-reserve-analysis/dashboard/)**
+**[View the dashboard →](https://lauwoes.github.io/honey-reserve-analysis/)**
 
 ## The finding
 
@@ -46,7 +46,7 @@ deck, and which carries different risks and needs different proof.
 The repository ships with no data, so every figure is one you pulled yourself.
 
 1. Get a free key at [quickstats.nass.usda.gov/api](https://quickstats.nass.usda.gov/api)
-2. Open `notebooks/honey_analysis.ipynb` in
+2. Open `honey_analysis.ipynb` in
    [Google Colab](https://colab.research.google.com) (File → Upload notebook)
 3. Add the key as a Colab secret named `NASS_API_KEY`, or let the notebook prompt for it
 4. Run all cells
@@ -55,12 +55,12 @@ The notebook writes `honey.db`, `honey_panel.csv` and `state_summary.csv`.
 
 ## Layout
 
-| Path | What it is |
+| File | What it is |
 | --- | --- |
-| `notebooks/honey_analysis.ipynb` | The analysis, runnable end to end |
-| `notebooks/honey_analysis.py` | Same content as a script, for readable diffs |
-| `sql/queries.sql` | Window-function queries against the generated database |
-| `dashboard/index.html` | Findings dashboard, no build step |
+| `honey_analysis.ipynb` | The analysis, runnable end to end |
+| `honey_analysis.py` | Same content as a script, for readable diffs |
+| `queries.sql` | Window-function queries against the generated database |
+| `index.html` | Findings dashboard, no build step |
 
 ## Data handling
 
@@ -79,9 +79,16 @@ production, and leaving it in puts a cliff on every trend line.
 
 **Price was recovered from two unit series.** USDA publishes price in dollars
 per pound and in cents per pound, and which appears varies by state and year.
-Converting the cents series recovered 123 of 213 missing values. The two agree
-exactly across every overlapping record, so the fill is verified rather than
-assumed, and the notebook asserts this rather than trusting it.
+Converting the cents series to dollars recovered 123 of 213 missing values.
+
+No state-year appears in both series, so the two cannot be checked against each
+other directly. An earlier version of this analysis appeared to verify them and
+did not: the comparison ran after the values had been copied across, so it was
+comparing a column against itself and a zero difference was guaranteed. The
+conversion is instead supported by the unit itself, since the cents series holds
+values in the hundreds where honey does not sell for hundreds of dollars a
+pound, and by cross-checking against production value divided by pounds
+produced, which comes from neither price series.
 
 The 90 rows still missing price are also missing production, value and yield.
 Those are state-years where USDA recorded hives but published no honey figures,
